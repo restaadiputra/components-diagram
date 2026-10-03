@@ -47,6 +47,7 @@ async function setup() {
     saved: [] as { fileName: string; text: string }[],
     next: undefined as string | undefined,
     failure: undefined as Error | undefined,
+    saveFailure: undefined as Error | undefined,
   };
   const session = createSession({
     store,
@@ -54,7 +55,10 @@ async function setup() {
     autosave,
     codec: jsonDiagramCodec,
     files: {
-      saveText: (fileName, text) => files.saved.push({ fileName, text }),
+      saveText: (fileName, text) => {
+        if (files.saveFailure) throw files.saveFailure;
+        files.saved.push({ fileName, text });
+      },
       openText: () => (files.failure ? Promise.reject(files.failure) : Promise.resolve(files.next)),
     },
   });
@@ -123,6 +127,13 @@ describe('diagram session', () => {
     session.exportCurrent();
     expect(files.saved[0]?.fileName).toBe('Current.diagram.json');
     expect(JSON.parse(files.saved[0]?.text ?? '')).toEqual(state().diagram);
+  });
+
+  it('reports a failed export through the notice instead of throwing', async () => {
+    const { session, files, state } = await setup();
+    files.saveFailure = new Error('blocked');
+    expect(() => session.exportCurrent()).not.toThrow();
+    expect(state().notice).toBe('The diagram could not be exported.');
   });
 
   it('imports a file as a new diagram', async () => {

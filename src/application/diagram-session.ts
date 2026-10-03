@@ -35,7 +35,7 @@ export function fileNameFor(name: string): string {
   return `${base === '' ? 'diagram' : base}.diagram.json`;
 }
 
-function droppedNotice(count: number): string | null {
+export function droppedNotice(count: number): string | null {
   if (count === 0) return null;
   const subject =
     count === 1 ? '1 broken connection was' : `${String(count)} broken connections were`;
@@ -196,7 +196,11 @@ export function createSession(deps: SessionDeps): DiagramSession {
     remove,
     exportCurrent: () => {
       const { diagram } = state();
-      files.saveText(fileNameFor(diagram.name), codec.serialize(diagram));
+      try {
+        files.saveText(fileNameFor(diagram.name), codec.serialize(diagram));
+      } catch {
+        notify('The diagram could not be exported.');
+      }
     },
     importFile: async () => {
       const text = await readImportText(files, store);
