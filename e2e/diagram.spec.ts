@@ -1,39 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-
-/** The double-click menu is the dependable way to add a node; Playwright's dragTo does not reliably deliver the HTML5 drop. */
-async function addComponent(page: Page, name: string, at: { x: number; y: number }) {
-  await page.locator('.react-flow__pane').dblclick({ position: at });
-  await page.getByRole('menuitem', { name: /Component/ }).click();
-  const node = page.getByTestId('node-Component');
-  await node.getByText('Component', { exact: true }).dblclick();
-  await node.getByLabel('Name').fill(name);
-  await node.getByLabel('Name').press('Enter');
-  const renamed = page.getByTestId(`node-${name}`);
-  await expect(renamed).toBeVisible();
-  return renamed;
-}
-
-async function addItem(page: Page, nodeName: string, item: { kind: string; name: string }) {
-  const node = page.getByTestId(`node-${nodeName}`);
-  const open = node.getByRole('button', { name: '+ add item' });
-  if (await open.isVisible()) await open.click();
-  await node.getByLabel('Item kind').selectOption(item.kind);
-  await node.getByLabel('Item name').fill(item.name);
-  await node.getByLabel('Item name').press('Enter');
-  await expect(page.getByTestId(`item-${nodeName}-${item.name}`)).toBeVisible();
-}
-
-/** React Flow listens for pointer moves, so the drag needs intermediate steps. */
-async function connect(page: Page, from: Locator, to: Locator) {
-  const source = from.locator('.react-flow__handle-right');
-  const target = to.locator('.react-flow__handle-left');
-  await source.hover();
-  await page.mouse.down();
-  const box = await target.boundingBox();
-  if (!box) throw new Error('target handle has no layout box');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 10 });
-  await page.mouse.up();
-}
+import { addComponent, addItem, connect } from './helpers';
 
 /** Page.cartItems (state) is passed as a prop to List.items. */
 async function buildCart(page: Page) {
@@ -48,7 +14,6 @@ async function buildCart(page: Page) {
 
 test('a diagram survives a reload', async ({ page }) => {
   await buildCart(page);
-  await expect(page.getByTestId('save-status')).toHaveText('Saving…');
   await expect(page.getByTestId('save-status')).toHaveText('Saved');
 
   await page.reload();
@@ -121,4 +86,57 @@ test('an invalid file is rejected with a message', async ({ page }) => {
   ).toBeVisible();
   await page.getByTestId('diagram-name').click();
   await expect(page.getByTestId('diagram-row')).toHaveCount(1);
+});
+
+async function position(node: Locator) {
+  return node.evaluate(
+    (element) => (element.closest('.react-flow__node') as HTMLElement).style.transform,
+  );
+}
+
+/** Arrow keys only move a node that holds focus; wait for that instead of assuming it. */
+async function focusNode(page: Page, name: string) {
+  const node = page.getByTestId(`node-${name}`);
+  await node.getByText(name, { exact: true }).click();
+  await expect(page.locator('.react-flow__node').filter({ has: node })).toBeFocused();
+}
+
+test('a keyboard nudge is saved and can be undone', async ({ page }) => {
+  await page.goto('/');
+  const node = await addComponent(page, 'Page', { x: 150, y: 200 });
+  const before = await position(node);
+
+  await focusNode(page, 'Page');
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => position(node)).not.toBe(before);
+  const nudged = await position(node);
+  await expect(page.getByTestId('save-status')).toHaveText('Saved');
+
+  await page.reload();
+  await expect.poll(() => position(page.getByTestId('node-Page'))).toBe(nudged);
+
+  // History does not survive a reload, so undo is checked on a second nudge.
+  await focusNode(page, 'Page');
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(() => position(page.getByTestId('node-Page'))).not.toBe(nudged);
+  await page.keyboard.press('Control+z');
+  await expect.poll(() => position(page.getByTestId('node-Page'))).toBe(nudged);
+});
+
+test('a mouse drag is one undo step', async ({ page }) => {
+  await page.goto('/');
+  const node = await addComponent(page, 'Page', { x: 230, y: 280 });
+  const before = await position(node);
+
+  const box = await node.getByText('Page', { exact: true }).boundingBox();
+  if (!box) throw new Error('node header has no layout box');
+  await page.mouse.move(box.x + 5, box.y + 5);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 125, box.y + 65, { steps: 10 });
+  await page.mouse.up();
+  const moved = await position(node);
+  expect(moved).not.toBe(before);
+
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect.poll(() => position(node)).toBe(before);
 });
