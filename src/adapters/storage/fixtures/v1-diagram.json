@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture-1",
+  "name": "Checkout flow",
+  "createdAt": "2026-10-01T08:00:00.000Z",
+  "updatedAt": "2026-10-02T09:30:00.000Z",
+  "nodes": [
+    {
+      "id": "n-page",
+      "kind": "component",
+      "name": "CartPage",
+      "position": { "x": 0, "y": 0 },
+      "collapsed": false,
+      "items": [
+        { "id": "i-on-add", "kind": "handler", "name": "onAdd" },
+        { "id": "i-cart-items", "kind": "state", "name": "cartItems", "type": "CartItem[]" }
+      ],
+      "links": [
+        { "id": "l-1", "fromItemId": "i-on-add", "toItemId": "i-cart-items", "relation": "sets" }
+      ]
+    },
+    {
+      "id": "n-list",
+      "kind": "component",
+      "name": "CartList",
+      "position": { "x": 320, "y": 0 },
+      "collapsed": false,
+      "items": [{ "id": "i-items", "kind": "prop", "name": "items", "note": "from CartPage" }],
+      "links": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-1",
+      "kind": "renders",
+      "source": { "nodeId": "n-page" },
+      "target": { "nodeId": "n-list" }
+    },
+    {
+      "id": "e-2",
+      "kind": "passes-prop",
+      "source": { "nodeId": "n-page", "itemId": "i-cart-items" },
+      "target": { "nodeId": "n-list", "itemId": "i-items" }
+    }
+  ],
+  "viewport": { "x": 10, "y": 20, "zoom": 1.5 }
+}
