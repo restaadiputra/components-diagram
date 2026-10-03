@@ -19,6 +19,11 @@ const diagram = diagramOf(
 );
 
 describe('node commands', () => {
+  it('refuses a node id already in the diagram', () => {
+    const input = { id: 'Page', kind: 'hook' as const, name: 'x', position: { x: 0, y: 0 } };
+    expect(addNode(diagram, input)).toBe(diagram);
+  });
+
   it('adds an empty, expanded node', () => {
     const next = addNode(diagramOf([]), {
       id: 'n1',

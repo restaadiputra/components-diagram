@@ -1,4 +1,5 @@
 import type { Diagram, DiagramNode, InternalLink } from '../../domain/diagram';
+import { isLinkIdUsed } from '../../domain/id-usage';
 import { updateNode } from './update-node';
 
 function canLink(node: DiagramNode, link: InternalLink): boolean {
@@ -17,6 +18,7 @@ export function linkItems(
   diagram: Diagram,
   input: { nodeId: string; link: InternalLink },
 ): Diagram {
+  if (isLinkIdUsed(diagram, input.link.id)) return diagram;
   return updateNode(diagram, input.nodeId, (node) =>
     canLink(node, input.link) ? { ...node, links: [...node.links, input.link] } : node,
   );

@@ -6,7 +6,7 @@ import { edge, node } from '../domain/testing/fixtures';
 import { startAutosave, type Autosave } from './autosave';
 import { renameDiagram } from './commands/rename-diagram';
 import { createDiagramLibrary } from './diagram-library';
-import { createSession, fileNameFor } from './diagram-session';
+import { createSession, droppedNotice, fileNameFor } from './diagram-session';
 import { createDiagramStore } from './diagram-store';
 import type { DiagramRepository } from './ports/diagram-repository';
 
@@ -81,7 +81,7 @@ describe('diagram session', () => {
     expect(state().notice).toBe('That diagram no longer exists.');
   });
 
-  it('reports references dropped while opening', async () => {
+  it('reports invalid entries dropped while opening', async () => {
     const { session, state, repository } = await setup();
     await repository.save({
       ...createDiagram('d3', 'Broken', NOW),
@@ -89,7 +89,12 @@ describe('diagram session', () => {
       edges: [edge('e1', 'renders', 'Page->Ghost')],
     });
     await session.open('d3');
-    expect(state().notice).toBe('1 broken connection was removed while opening this diagram.');
+    expect(state().notice).toBe('1 invalid entry was removed while opening this diagram.');
+  });
+
+  it('counts every invalid entry in the notice', () => {
+    expect(droppedNotice(0)).toBeNull();
+    expect(droppedNotice(3)).toBe('3 invalid entries were removed while opening this diagram.');
   });
 
   it('creates and opens a new diagram', async () => {

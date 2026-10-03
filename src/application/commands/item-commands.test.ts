@@ -24,6 +24,10 @@ describe('item commands', () => {
     expect(addItem(diagram, { nodeId: 'List', item: item('fetch', 'method') })).toBe(diagram);
   });
 
+  it('rejects an item id already used by any item in the diagram', () => {
+    expect(addItem(diagram, { nodeId: 'List', item: item('cartItems', 'derived') })).toBe(diagram);
+  });
+
   it('rejects an item with an empty name or a missing node', () => {
     const blank = { id: 'x', kind: 'state' as const, name: '  ' };
     expect(addItem(diagram, { nodeId: 'List', item: blank })).toBe(diagram);

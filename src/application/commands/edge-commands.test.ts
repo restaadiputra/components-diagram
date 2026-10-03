@@ -28,6 +28,22 @@ describe('connect', () => {
     const input = { id: 'e1', kind: 'renders' as const, source: ep('Page'), target: ep('useCart') };
     expect(connect(diagram, input)).toBe(diagram);
   });
+
+  it('refuses an id already used by another edge', () => {
+    const base = connect(diagramOf(nodes), {
+      id: 'e1',
+      kind: 'renders',
+      source: ep('Page'),
+      target: ep('List'),
+    });
+    const reused = {
+      id: 'e1',
+      kind: 'passes-prop' as const,
+      source: ep('Page/cartItems'),
+      target: ep('List/items'),
+    };
+    expect(connect(base, reused)).toBe(base);
+  });
 });
 
 describe('removeEdge', () => {

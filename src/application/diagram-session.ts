@@ -37,8 +37,8 @@ export function fileNameFor(name: string): string {
 
 export function droppedNotice(count: number): string | null {
   if (count === 0) return null;
-  const subject =
-    count === 1 ? '1 broken connection was' : `${String(count)} broken connections were`;
+  // "Entry" covers nodes, items, connections and links: any of them can be dropped.
+  const subject = count === 1 ? '1 invalid entry was' : `${String(count)} invalid entries were`;
   return `${subject} removed while opening this diagram.`;
 }
 

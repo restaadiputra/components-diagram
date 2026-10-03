@@ -8,7 +8,7 @@ export interface DiagramSummary {
 
 export interface LoadedDiagram {
   diagram: Diagram;
-  /** Edges and links that pointed at something missing and were removed. */
+  /** Nodes, items, edges and links that were invalid and removed on load. */
   droppedReferences: number;
 }
 

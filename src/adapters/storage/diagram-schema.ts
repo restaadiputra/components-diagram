@@ -8,7 +8,7 @@ import {
   LINK_RELATION_VALUES,
   NODE_KIND_VALUES,
 } from '../../domain/diagram';
-import { dropDanglingReferences } from '../../domain/repair';
+import { repairDiagram } from '../../domain/repair';
 
 const id = z.string().min(1);
 
@@ -92,7 +92,7 @@ export function parseDiagram(raw: unknown): ParseResult {
       reason: `This diagram file is invalid at "${where}": ${issue?.message ?? 'unknown problem'}.`,
     };
   }
-  const { diagram, dropped } = dropDanglingReferences(parsed.data);
+  const { diagram, dropped } = repairDiagram(parsed.data);
   return { ok: true, diagram, droppedReferences: dropped };
 }
 

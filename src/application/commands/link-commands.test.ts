@@ -33,6 +33,13 @@ describe('linkItems', () => {
     const input = { nodeId: 'ghost', link: link('l2', 'reads', 'onAdd->cartItems') };
     expect(linkItems(diagram, input)).toBe(diagram);
   });
+
+  it('refuses an id already used by a link, in any node', () => {
+    const other = node('Other', 'component', { items: [item('a', 'state'), item('b', 'state')] });
+    const both = diagramOf([page, other]);
+    const reused = link('l1', 'reads', 'a->b');
+    expect(linkItems(both, { nodeId: 'Other', link: reused })).toBe(both);
+  });
 });
 
 describe('unlinkItems', () => {

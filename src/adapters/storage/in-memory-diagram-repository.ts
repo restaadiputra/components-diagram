@@ -1,6 +1,6 @@
 import type { DiagramRepository } from '../../application/ports/diagram-repository';
 import type { Diagram } from '../../domain/diagram';
-import { dropDanglingReferences } from '../../domain/repair';
+import { repairDiagram } from '../../domain/repair';
 import { newestFirst } from './diagram-schema';
 
 /** Used in tests, and as the fallback when the browser has no usable IndexedDB. */
@@ -14,7 +14,7 @@ export function createInMemoryDiagramRepository(): DiagramRepository {
     load: (id) => {
       const found = records.get(id);
       if (!found) return Promise.resolve(undefined);
-      const { diagram, dropped } = dropDanglingReferences(structuredClone(found));
+      const { diagram, dropped } = repairDiagram(structuredClone(found));
       return Promise.resolve({ diagram, droppedReferences: dropped });
     },
     list: () => {

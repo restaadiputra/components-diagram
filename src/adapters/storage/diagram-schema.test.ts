@@ -39,6 +39,58 @@ describe('parseDiagram', () => {
     expect(result.ok && result.droppedReferences).toBe(1);
     expect(result.ok && result.diagram.edges.map((edge) => edge.id)).toEqual(['e-1', 'e-2']);
   });
+
+  describe('domain-invalid content', () => {
+    const [page, list] = fixture.nodes;
+    const dropped = (result: ReturnType<typeof parseDiagram>) =>
+      result.ok && result.droppedReferences;
+
+    it('drops an item its node kind does not allow', () => {
+      const stray = { id: 'i-stray', kind: 'method', name: 'stray' };
+      const nodes = [{ ...page, items: [...(page?.items ?? []), stray] }, list];
+      const result = parseDiagram({ ...fixture, nodes });
+      expect(dropped(result)).toBe(1);
+      expect(result.ok && result.diagram.nodes[0]?.items.map((i) => i.id)).toEqual([
+        'i-on-add',
+        'i-cart-items',
+      ]);
+    });
+
+    it('drops an edge its endpoints do not allow', () => {
+      const bad = {
+        id: 'e-bad',
+        kind: 'provides',
+        source: { nodeId: 'n-page' },
+        target: { nodeId: 'n-list' },
+      };
+      const result = parseDiagram({ ...fixture, edges: [...fixture.edges, bad] });
+      expect(dropped(result)).toBe(1);
+      expect(result.ok && result.diagram.edges.map((e) => e.id)).toEqual(['e-1', 'e-2']);
+    });
+
+    it('keeps the first of two nodes sharing an id', () => {
+      const twin = { ...list, name: 'Twin', items: [], links: [] };
+      const result = parseDiagram({ ...fixture, nodes: [...fixture.nodes, twin] });
+      expect(dropped(result)).toBe(1);
+      expect(result.ok && result.diagram.nodes.map((n) => n.name)).toEqual([
+        'CartPage',
+        'CartList',
+      ]);
+    });
+
+    it('drops an entity whose id contains a colon', () => {
+      const nodes = [{ ...page, id: 'n:page' }, list];
+      const result = parseDiagram({ ...fixture, nodes });
+      expect(result.ok && result.diagram.nodes.map((n) => n.id)).toEqual(['n-list']);
+      expect(dropped(result)).toBeGreaterThan(0);
+    });
+
+    it('resets an unusable zoom without counting it as dropped', () => {
+      const result = parseDiagram({ ...fixture, viewport: { x: 10, y: 20, zoom: 0 } });
+      expect(dropped(result)).toBe(0);
+      expect(result.ok && result.diagram.viewport).toEqual({ x: 0, y: 0, zoom: 1 });
+    });
+  });
 });
 
 describe('jsonDiagramCodec', () => {

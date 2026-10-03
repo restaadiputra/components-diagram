@@ -1,7 +1,7 @@
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import { createDiagram, type Diagram } from '../../domain/diagram';
-import { edge, node } from '../../domain/testing/fixtures';
+import { edge, item, node } from '../../domain/testing/fixtures';
 import { createInMemoryDiagramRepository } from './in-memory-diagram-repository';
 import { createIndexedDbDiagramRepository } from './indexed-db-diagram-repository';
 
@@ -62,6 +62,30 @@ describe.each([
     const loaded = await repository.load('a');
     expect(loaded?.droppedReferences).toBe(1);
     expect(loaded?.diagram.edges).toEqual([]);
+  });
+
+  it('repairs a stored diagram that is domain-invalid', async () => {
+    const repository = create();
+    const damaged = {
+      ...diagram('a', '2026-01-02T00:00:00.000Z'),
+      nodes: [
+        node('Page', 'component', { items: [item('x', 'method')] }),
+        node('Page', 'component'),
+        node('List', 'component'),
+      ],
+      edges: [edge('e1', 'provides', 'Page->List')],
+      viewport: { x: 5, y: 5, zoom: 0 },
+    };
+    await repository.save(damaged);
+    const loaded = await repository.load('a');
+    // The disallowed item, the repeated node and the edge its endpoints refuse.
+    expect(loaded?.droppedReferences).toBe(3);
+    expect(loaded?.diagram.nodes.map((n) => [n.id, n.items.length])).toEqual([
+      ['Page', 0],
+      ['List', 0],
+    ]);
+    expect(loaded?.diagram.edges).toEqual([]);
+    expect(loaded?.diagram.viewport).toEqual({ x: 0, y: 0, zoom: 1 });
   });
 });
 

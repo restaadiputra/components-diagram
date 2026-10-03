@@ -97,6 +97,8 @@ export interface Diagram {
 
 export const CURRENT_SCHEMA_VERSION = 1;
 
+export const DEFAULT_VIEWPORT: Readonly<Viewport> = { x: 0, y: 0, zoom: 1 };
+
 export function createDiagram(id: string, name: string, now: string): Diagram {
   return {
     id,
@@ -106,7 +108,7 @@ export function createDiagram(id: string, name: string, now: string): Diagram {
     updatedAt: now,
     nodes: [],
     edges: [],
-    viewport: { x: 0, y: 0, zoom: 1 },
+    viewport: { ...DEFAULT_VIEWPORT },
   };
 }
 
