@@ -1,0 +1,7 @@
+# AI working files (specs, plans, tasks) and agent instructions stay local
+.ai/
+AGENTS.md
+CLAUDE.md
+
+node_modules/
+dist/
