@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { toFlowEdges, toFlowNodes } from '../../adapters/canvas/to-flow';
 import { useDiagramState, useServices } from '../app-shell/services-context';
 import { DiagramNodeView } from './diagram-node';
+import { EdgeLegend } from './edge-legend';
 import { EdgeKindMenu } from './edge-kind-menu';
 import { QuickAddMenu } from './quick-add-menu';
 import { useAddNode } from './use-add-node';
@@ -78,6 +79,7 @@ export function DiagramCanvas() {
         <MiniMap pannable zoomable />
         <Controls />
       </ReactFlow>
+      <EdgeLegend />
       {connection.pending && (
         <EdgeKindMenu
           kinds={connection.pending.kinds}
