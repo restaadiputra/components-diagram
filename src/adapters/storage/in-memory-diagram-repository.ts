@@ -1,4 +1,7 @@
-import type { DiagramRepository } from '../../application/ports/diagram-repository';
+import {
+  SaveConflictError,
+  type DiagramRepository,
+} from '../../application/ports/diagram-repository';
 import type { Diagram } from '../../domain/diagram';
 import { repairDiagram } from '../../domain/repair';
 import { newestFirst } from './diagram-schema';
@@ -7,7 +10,10 @@ import { newestFirst } from './diagram-schema';
 export function createInMemoryDiagramRepository(): DiagramRepository {
   const records = new Map<string, Diagram>();
   return {
-    save: (diagram) => {
+    save: (diagram, expected) => {
+      if (expected && (records.get(diagram.id)?.updatedAt ?? null) !== expected.updatedAt) {
+        return Promise.reject(new SaveConflictError());
+      }
       records.set(diagram.id, structuredClone(diagram));
       return Promise.resolve();
     },

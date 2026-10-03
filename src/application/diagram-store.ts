@@ -12,7 +12,7 @@ import {
 import { reselect, type Selection } from './selection';
 
 export type Command = (diagram: Diagram) => Diagram;
-export type SaveStatus = 'saved' | 'saving' | 'failed';
+export type SaveStatus = 'saved' | 'saving' | 'failed' | 'conflict';
 
 export interface DiagramState {
   diagram: Diagram;

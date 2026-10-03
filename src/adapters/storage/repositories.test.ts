@@ -2,6 +2,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
 import { createDiagram, type Diagram } from '../../domain/diagram';
 import { edge, item, node } from '../../domain/testing/fixtures';
+import { SaveConflictError } from '../../application/ports/diagram-repository';
 import { createInMemoryDiagramRepository } from './in-memory-diagram-repository';
 import { createIndexedDbDiagramRepository } from './indexed-db-diagram-repository';
 
@@ -49,6 +50,53 @@ describe.each([
     await repository.save(diagram('a', '2026-01-02T00:00:00.000Z'));
     await repository.delete('a');
     expect(await repository.list()).toEqual([]);
+  });
+
+  describe('conditional save', () => {
+    const T1 = '2026-01-02T00:00:00.000Z';
+    const T2 = '2026-01-03T00:00:00.000Z';
+
+    it('writes when the stored updatedAt matches', async () => {
+      const repository = create();
+      await repository.save(diagram('a', T1));
+      await repository.save({ ...diagram('a', T2), name: 'Next' }, { updatedAt: T1 });
+      expect((await repository.load('a'))?.diagram.name).toBe('Next');
+    });
+
+    it('writes a new diagram when no record may exist and none does', async () => {
+      const repository = create();
+      await repository.save(diagram('a', T1), { updatedAt: null });
+      expect(await repository.list()).toHaveLength(1);
+    });
+
+    it('refuses and writes nothing when the stored updatedAt differs', async () => {
+      const repository = create();
+      await repository.save(diagram('a', T2));
+      await expect(
+        repository.save(
+          { ...diagram('a', '2026-01-04T00:00:00.000Z'), name: 'Mine' },
+          { updatedAt: T1 },
+        ),
+      ).rejects.toBeInstanceOf(SaveConflictError);
+      expect((await repository.load('a'))?.diagram.name).toBe('Diagram a');
+    });
+
+    it('refuses when the record was deleted since it was read', async () => {
+      const repository = create();
+      await expect(repository.save(diagram('a', T2), { updatedAt: T1 })).rejects.toBeInstanceOf(
+        SaveConflictError,
+      );
+      expect(await repository.list()).toEqual([]);
+    });
+
+    it('refuses a new diagram when a record already exists', async () => {
+      const repository = create();
+      await repository.save(diagram('a', T1));
+      await expect(
+        repository.save({ ...diagram('a', T2), name: 'Mine' }, { updatedAt: null }),
+      ).rejects.toBeInstanceOf(SaveConflictError);
+      expect((await repository.load('a'))?.diagram.name).toBe('Diagram a');
+    });
   });
 
   it('repairs dangling references on load and reports how many', async () => {

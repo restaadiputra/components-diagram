@@ -46,7 +46,9 @@ async function bootstrap() {
   const store = createDiagramStore(initial.diagram, now);
   // The session reports dropped references for later opens; startup needs the same message.
   store.getState().setNotice(droppedNotice(initial.droppedReferences));
-  const autosave = startAutosave(store, repository);
+  const autosave = startAutosave(store, repository, {
+    baseline: initial.unsaved ? null : initial.diagram.updatedAt,
+  });
   const session = createSession({
     store,
     library,

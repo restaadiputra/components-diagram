@@ -1,5 +1,11 @@
 import type { DiagramStore } from './diagram-store';
-import type { DiagramRepository } from './ports/diagram-repository';
+import { createSaveBaseline } from './save-baseline';
+import type { Diagram } from '../domain/diagram';
+import {
+  SaveConflictError,
+  type DiagramRepository,
+  type SaveExpectation,
+} from './ports/diagram-repository';
 
 export const AUTOSAVE_DELAY_MS = 800;
 
@@ -13,39 +19,61 @@ export interface Autosave {
   stop: () => void;
 }
 
+export interface AutosaveOptions {
+  delayMs?: number;
+  /** The stored `updatedAt` of the open diagram; null if it is not stored yet. Defaults to its own. */
+  baseline?: string | null;
+}
+
+/** Resolves to null when the write succeeded, else the status to show. */
+async function trySave(
+  repository: DiagramRepository,
+  diagram: Diagram,
+  expected: SaveExpectation,
+): Promise<'conflict' | 'failed' | null> {
+  try {
+    await repository.save(diagram, expected);
+    return null;
+  } catch (error) {
+    return error instanceof SaveConflictError ? 'conflict' : 'failed';
+  }
+}
+
 export function startAutosave(
   store: DiagramStore,
   repository: DiagramRepository,
-  delayMs = AUTOSAVE_DELAY_MS,
+  { delayMs = AUTOSAVE_DELAY_MS, baseline: initialBaseline }: AutosaveOptions = {},
 ): Autosave {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let running: Promise<boolean> | undefined;
   let suspended = false;
+  const hasUnsavedChanges = () => dirty;
   // True from the first unsaved change until a write of the latest diagram succeeds.
   // A failed write leaves it set, so the next flush retries.
   let dirty = false;
 
-  const hasUnsavedChanges = () => dirty;
+  const baseline = createSaveBaseline(store.getState().diagram, initialBaseline);
+  // Once another tab changed the diagram this tab never writes it again; it must be reloaded.
+  let conflicted = false;
 
   const clearTimer = () => {
     clearTimeout(timer);
-    timer = undefined;
   };
 
   const write = async (): Promise<boolean> => {
     const { diagram, setSaveStatus } = store.getState();
-    // Cleared before the write: a change made during it sets the flag again.
-    dirty = false;
-    try {
-      await repository.save(diagram);
-    } catch {
+    dirty = false; // a change made during the write sets it again
+    const failure = await trySave(repository, diagram, baseline.expectation());
+    if (failure) {
       // The diagram is still in memory; the UI tells the user to export it.
       dirty = true;
-      setSaveStatus('failed');
+      conflicted = failure === 'conflict';
+      setSaveStatus(failure);
       return false;
     }
+    baseline.wrote(diagram, store.getState().diagram);
     // TypeScript cannot see that a change during the await set the flag again.
-    if (!hasUnsavedChanges()) store.getState().setSaveStatus('saved');
+    if (!hasUnsavedChanges()) setSaveStatus('saved');
     return true;
   };
 
@@ -68,6 +96,7 @@ export function startAutosave(
     for (;;) {
       while (running) await running;
       if (!dirty) return true;
+      if (conflicted) return false;
       if (!(await startWrite())) return false;
     }
   };
@@ -80,8 +109,12 @@ export function startAutosave(
 
   const unsubscribe = store.subscribe((state, previous) => {
     if (state.diagram === previous.diagram) return;
+    if (state.diagram.id !== previous.diagram.id) {
+      baseline.opened(state.diagram);
+      conflicted = false;
+    }
     dirty = true;
-    if (!suspended) schedule();
+    if (!suspended && !conflicted) schedule();
   });
 
   return {
@@ -94,7 +127,7 @@ export function startAutosave(
     resume: () => {
       suspended = false;
       // A change that was dropped or made while suspended is still unsaved.
-      if (dirty) schedule();
+      if (dirty && !conflicted) schedule();
     },
     stop: () => {
       clearTimer();

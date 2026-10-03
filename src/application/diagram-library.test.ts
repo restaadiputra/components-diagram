@@ -98,7 +98,8 @@ describe('diagram library', () => {
       newId: () => 'fresh',
       now: () => '2026-10-03T12:00:00.000Z',
     });
-    const { diagram } = await library.openInitial();
+    const { diagram, unsaved } = await library.openInitial();
     expect(diagram.id).toBe('fresh');
+    expect(unsaved).toBe(true);
   });
 });

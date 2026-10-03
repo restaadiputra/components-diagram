@@ -5,16 +5,22 @@ const LABELS: Record<SaveStatus, string> = {
   saving: 'Saving…',
   saved: 'Saved',
   failed: 'Save failed — export to keep your work',
+  conflict: 'Changed in another tab — export to keep your work',
 };
 
-export function SaveStatusLabel() {
-  const status = useDiagramState((state) => state.saveStatus);
+const PROBLEMS: readonly SaveStatus[] = ['failed', 'conflict'];
+
+export function SaveStatusView({ status }: { status: SaveStatus }) {
   return (
     <span
       data-testid="save-status"
-      className={status === 'failed' ? 'text-red-700' : 'text-slate-500'}
+      className={PROBLEMS.includes(status) ? 'text-red-700' : 'text-slate-500'}
     >
       {LABELS[status]}
     </span>
   );
+}
+
+export function SaveStatusLabel() {
+  return <SaveStatusView status={useDiagramState((state) => state.saveStatus)} />;
 }

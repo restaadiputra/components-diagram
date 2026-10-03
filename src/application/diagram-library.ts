@@ -36,11 +36,15 @@ export function createDiagramLibrary(deps: LibraryDeps): DiagramLibrary {
     return diagram;
   };
 
-  // The first edit saves it, so a failed write here costs nothing.
-  const createUnsaved = async () => {
+  // The first edit saves it, so a failed write here costs nothing. `unsaved` tells autosave
+  // that no record exists, so that first save must not expect one.
+  const createUnsaved = async (): Promise<LoadedDiagram> => {
     const diagram = createDiagram(newId(), 'Untitled diagram', now());
-    await repository.save(diagram).catch(() => undefined);
-    return diagram;
+    const stored = await repository.save(diagram).then(
+      () => true,
+      () => false,
+    );
+    return { diagram, droppedReferences: 0, ...(stored ? {} : { unsaved: true }) };
   };
 
   const adopt = async (diagram: Diagram) => {
@@ -63,7 +67,7 @@ export function createDiagramLibrary(deps: LibraryDeps): DiagramLibrary {
       if (last) return last;
       const [latest] = await repository.list().catch(() => []);
       const recent = await tryLoad(latest?.id);
-      return recent ?? { diagram: await createUnsaved(), droppedReferences: 0 };
+      return recent ?? (await createUnsaved());
     },
     duplicate: async (id) => {
       const found = await repository.load(id);
