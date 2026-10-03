@@ -3,7 +3,7 @@ import { diagramOf, edge, ep, item, node } from '../../domain/testing/fixtures';
 import { trace } from '../../domain/trace';
 import { endpointsOf, isInvalidTarget } from './from-flow';
 import { handleId, toEndpoint } from './handle-ids';
-import { applyOverlayChanges, clearPositions, emptyOverlay } from './node-overlay';
+import { applyOverlayChanges, clearPositions, committedMoves, emptyOverlay } from './node-overlay';
 import { toFlowEdges, toFlowNodes, type CanvasView } from './to-flow';
 
 const page = node('Page', 'component', { items: [item('cartItems', 'state')] });
@@ -48,6 +48,20 @@ describe('node overlay', () => {
   it('clears positions for the given nodes only', () => {
     const overlay = { positions: { a: { x: 1, y: 1 }, b: { x: 2, y: 2 } }, measured: {} };
     expect(clearPositions(overlay, ['a']).positions).toEqual({ b: { x: 2, y: 2 } });
+  });
+
+  it('commits moves that are not mid-drag (drag end, keyboard nudge)', () => {
+    expect(
+      committedMoves([
+        { type: 'position', id: 'a', position: { x: 1, y: 1 }, dragging: true },
+        { type: 'position', id: 'b', position: { x: 2, y: 2 }, dragging: false },
+        { type: 'position', id: 'c', position: { x: 3, y: 3 } },
+        { type: 'select', id: 'd', selected: true },
+      ]),
+    ).toEqual([
+      { nodeId: 'b', position: { x: 2, y: 2 } },
+      { nodeId: 'c', position: { x: 3, y: 3 } },
+    ]);
   });
 });
 

@@ -33,3 +33,21 @@ export function clearPositions(overlay: NodeOverlay, nodeIds: string[]): NodeOve
   const kept = Object.entries(overlay.positions).filter(([id]) => !nodeIds.includes(id));
   return { ...overlay, positions: Object.fromEntries(kept) };
 }
+
+export interface CommittedMove {
+  nodeId: string;
+  position: Position;
+}
+
+/**
+ * Position changes that are not mid-drag: the end of a drag, or a keyboard
+ * nudge, which React Flow reports without any drag event. Only these belong
+ * in the diagram (and its undo history); in-drag positions stay in the overlay.
+ */
+export function committedMoves(changes: NodeChange<DiagramFlowNode>[]): CommittedMove[] {
+  return changes.flatMap((change) =>
+    change.type === 'position' && change.position && change.dragging !== true
+      ? [{ nodeId: change.id, position: change.position }]
+      : [],
+  );
+}

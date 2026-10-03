@@ -25,7 +25,7 @@ export function DiagramCanvas() {
   const diagram = useDiagramState((state) => state.diagram);
   const selection = useDiagramState((state) => state.selection);
   const traceResult = useDiagramState((state) => state.traceResult);
-  const { overlay, onNodesChange, onNodeDragStop } = useNodeOverlay();
+  const { overlay, onNodesChange } = useNodeOverlay();
   const connection = useConnect();
   const drop = useNodeDrop();
   const addNode = useAddNode();
@@ -60,7 +60,6 @@ export function DiagramCanvas() {
         defaultViewport={diagram.viewport}
         onMoveEnd={(_event, viewport) => setViewport(viewport)}
         onNodesChange={onNodesChange}
-        onNodeDragStop={onNodeDragStop}
         onConnect={connection.onConnect}
         isValidConnection={connection.isValidConnection}
         onNodeClick={(_event, node) => select({ type: 'node', nodeId: node.id })}
