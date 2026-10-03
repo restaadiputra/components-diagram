@@ -29,6 +29,12 @@ export function CommitInput({ label, value, onCommit }: CommitInputProps) {
         }}
         onKeyDown={(event) => {
           if (event.key === 'Enter') event.currentTarget.blur();
+          // An edit in progress is cancelled by Escape alone; a dialog around the
+          // field only sees the key when there is nothing left to cancel.
+          if (event.key === 'Escape' && draft !== value) {
+            event.stopPropagation();
+            setDraft(value);
+          }
         }}
       />
     </label>

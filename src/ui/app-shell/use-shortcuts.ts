@@ -21,9 +21,11 @@ function handleKey(event: KeyboardEvent, state: DiagramState): void {
   }
 }
 
-export function useShortcuts(): void {
+/** `paused` is true while a modal dialog is open, so keys cannot edit the diagram behind it. */
+export function useShortcuts(paused: boolean): void {
   const { store } = useServices();
   useEffect(() => {
+    if (paused) return;
     const onKeyDown = (event: KeyboardEvent) => {
       // Keys typed into a field belong to that field.
       if (!isTyping(event.target)) handleKey(event, store.getState());
@@ -32,5 +34,5 @@ export function useShortcuts(): void {
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [store]);
+  }, [store, paused]);
 }

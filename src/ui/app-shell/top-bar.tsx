@@ -1,23 +1,20 @@
-import { useState } from 'react';
-import { DiagramList } from '../panels/diagram-list';
 import { SaveStatusLabel } from './save-status-label';
 import { useDiagramState, useServices } from './services-context';
 
 const BUTTON = 'rounded border px-2 py-0.5 disabled:opacity-40';
 
-export function TopBar() {
+export function TopBar({ onOpenList }: { onOpenList: () => void }) {
   const { store, session } = useServices();
   const name = useDiagramState((state) => state.diagram.name);
   const canUndo = useDiagramState((state) => state.history.past.length > 0);
   const canRedo = useDiagramState((state) => state.history.future.length > 0);
-  const [listOpen, setListOpen] = useState(false);
 
   return (
     <header className="flex items-center gap-2 border-b px-3 py-2 text-sm">
       <button
         data-testid="diagram-name"
         className="font-semibold after:ml-1 after:content-['▾']"
-        onClick={() => setListOpen(true)}
+        onClick={onOpenList}
       >
         {name}
       </button>
@@ -35,7 +32,6 @@ export function TopBar() {
         Import
       </button>
       <SaveStatusLabel />
-      {listOpen && <DiagramList onClose={() => setListOpen(false)} />}
     </header>
   );
 }
