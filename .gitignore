@@ -8,3 +8,6 @@ dist/
 
 # Local Claude Code settings
 .claude/
+
+test-results/
+playwright-report/

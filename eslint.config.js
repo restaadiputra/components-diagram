@@ -15,7 +15,11 @@ export default tseslint.config(
   {
     languageOptions: {
       globals: globals.browser,
-      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+      parserOptions: {
+        // The config file sits outside both tsconfig projects (src and e2e), so it is linted with defaults.
+        projectService: { allowDefaultProject: ['playwright.config.ts'] },
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     plugins: { 'react-hooks': reactHooks, unicorn },
     rules: {
