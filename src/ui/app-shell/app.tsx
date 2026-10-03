@@ -1,5 +1,6 @@
 import { ReactFlowProvider } from '@xyflow/react';
 import { DiagramCanvas } from '../canvas/diagram-canvas';
+import { Inspector } from '../panels/inspector';
 import { Palette } from '../panels/palette';
 import { TopBar } from './top-bar';
 import { useShortcuts } from './use-shortcuts';
@@ -16,6 +17,7 @@ export function App() {
             <DiagramCanvas />
           </ReactFlowProvider>
         </main>
+        <Inspector />
       </div>
     </div>
   );
