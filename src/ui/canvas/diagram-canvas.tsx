@@ -5,6 +5,7 @@ import { toFlowEdges, toFlowNodes } from '../../adapters/canvas/to-flow';
 import { useDiagramState, useServices } from '../app-shell/services-context';
 import { DiagramNodeView } from './diagram-node';
 import { EdgeLegend } from './edge-legend';
+import { FitOnLoad } from './fit-on-load';
 import { EdgeKindMenu } from './edge-kind-menu';
 import { QuickAddMenu } from './quick-add-menu';
 import { useAddNode } from './use-add-node';
@@ -61,8 +62,6 @@ export function DiagramCanvas() {
         edges={edges}
         nodeTypes={nodeTypes}
         defaultViewport={diagram.viewport}
-        fitView={unmoved}
-        fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
         onMoveEnd={(_event, viewport) => setViewport(viewport)}
         onNodesChange={onNodesChange}
         onConnect={connection.onConnect}
@@ -79,6 +78,7 @@ export function DiagramCanvas() {
         zoomOnDoubleClick={false}
         minZoom={0.1}
       >
+        <FitOnLoad enabled={unmoved && diagram.nodes.length > 0} />
         <Background />
         <MiniMap pannable zoomable />
         <Controls />

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DiagramNode } from '../../domain/diagram';
 import { edge, item, node } from '../../domain/testing/fixtures';
-import { dagreLayout } from './dagre-layout';
+import { dagreLayout, MAX_COLUMN_HEIGHT } from './dagre-layout';
 import { estimateNodeSize } from './estimate-node-size';
 
 const at = (nodes: DiagramNode[], id: string) =>
@@ -86,5 +86,52 @@ describe('dagreLayout', () => {
     expect(
       laid.every((n) => Number.isInteger(n.position.x) && Number.isInteger(n.position.y)),
     ).toBe(true);
+  });
+});
+
+describe('dagreLayout wrapping', () => {
+  const kids = Array.from({ length: 12 }, (_, index) =>
+    node(`K${index.toString()}`, 'component', {
+      items: Array.from({ length: 6 }, (_unused, at) =>
+        item(`k${index.toString()}i${at.toString()}`, 'state'),
+      ),
+    }),
+  );
+  const root = node('Root', 'component');
+  const grandchild = node('Grand', 'component');
+  const edgesOf = [
+    ...kids.map((kid, index) => edge(`f${index.toString()}`, 'renders', `Root->${kid.id}`)),
+    edge('g', 'renders', 'K0->Grand'),
+  ];
+  const laid = dagreLayout([root, ...kids, grandchild], edgesOf);
+  const kidBoxes = laid.filter((n) => n.id.startsWith('K'));
+
+  it('splits a tall rank into several columns', () => {
+    expect(new Set(kidBoxes.map((n) => n.position.x)).size).toBeGreaterThan(1);
+  });
+
+  it('keeps every column within the height limit', () => {
+    const columns = new Map<number, DiagramNode[]>();
+    for (const box of kidBoxes) {
+      columns.set(box.position.x, [...(columns.get(box.position.x) ?? []), box]);
+    }
+    for (const column of columns.values()) {
+      const top = Math.min(...column.map((n) => n.position.y));
+      const bottom = Math.max(...column.map((n) => n.position.y + estimateNodeSize(n).height));
+      expect(bottom - top).toBeLessThanOrEqual(MAX_COLUMN_HEIGHT);
+    }
+  });
+
+  it('does not overlap and keeps later ranks to the right of every column', () => {
+    for (const [index, first] of laid.entries()) {
+      for (const second of laid.slice(index + 1)) expect(overlaps(first, second)).toBe(false);
+    }
+    const rightmost = Math.max(...kidBoxes.map((n) => n.position.x));
+    expect(at(laid, 'Grand').x).toBeGreaterThanOrEqual(rightmost + estimateNodeSize(page).width);
+  });
+
+  it('leaves a rank that already fits untouched (single column)', () => {
+    const small = dagreLayout([page, list, hook], edges);
+    expect(new Set([at(small, 'List').x, at(small, 'useCart').x]).size).toBe(1);
   });
 });

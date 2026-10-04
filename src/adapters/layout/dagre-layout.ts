@@ -4,6 +4,8 @@ import type { DiagramEdge, DiagramNode, Position } from '../../domain/diagram';
 import { estimateNodeSize, NODE_METRICS } from './estimate-node-size';
 
 const GAP = 40;
+/** A rank taller than this is split into columns, so large imports stay near screen proportions. */
+export const MAX_COLUMN_HEIGHT = 1800;
 type Pair = readonly [string, string];
 
 /** Node-to-node pairs, source first, without duplicates, self-loops or unknown ids. */
@@ -39,6 +41,59 @@ function layered(nodes: DiagramNode[], pairs: Pair[]): Map<string, Position> {
   );
 }
 
+/** Fills columns top to bottom in the given order, starting a new one when the height limit is reached. */
+function splitColumns(ordered: DiagramNode[]): DiagramNode[][] {
+  const columns: DiagramNode[][] = [[]];
+  let used = 0;
+  for (const node of ordered) {
+    const height = estimateNodeSize(node).height;
+    const current = columns[columns.length - 1] ?? [];
+    if (current.length > 0 && used + GAP + height > MAX_COLUMN_HEIGHT) {
+      columns.push([node]);
+      used = height;
+    } else {
+      current.push(node);
+      used += (current.length > 1 ? GAP : 0) + height;
+      if (current.length === 1) columns[columns.length - 1] = current;
+    }
+  }
+  return columns;
+}
+
+/**
+ * Splits ranks (nodes sharing an x) that are too tall into side-by-side columns and shifts
+ * every later rank right by the width added. A rank that fits keeps dagre's positions.
+ */
+function wrapTallRanks(
+  nodes: DiagramNode[],
+  positions: Map<string, Position>,
+): Map<string, Position> {
+  const ranks = new Map<number, DiagramNode[]>();
+  for (const node of nodes) {
+    const x = Math.round(positions.get(node.id)?.x ?? 0);
+    ranks.set(x, [...(ranks.get(x) ?? []), node]);
+  }
+  const wrapped = new Map<string, Position>();
+  const cell = NODE_METRICS.width + GAP;
+  let shift = 0;
+  for (const x of [...ranks.keys()].sort((a, b) => a - b)) {
+    const y = (node: DiagramNode) => positions.get(node.id)?.y ?? 0;
+    const ordered = [...(ranks.get(x) ?? [])].sort((a, b) => y(a) - y(b));
+    const columns = splitColumns(ordered);
+    const top = Math.min(...ordered.map(y));
+    columns.forEach((column, index) => {
+      let offset = top;
+      for (const node of column) {
+        const stacked = columns.length === 1 ? y(node) : offset;
+        wrapped.set(node.id, { x: x + shift + index * cell, y: stacked });
+        offset += estimateNodeSize(node).height + GAP;
+      }
+    });
+    shift += (columns.length - 1) * cell;
+  }
+  return wrapped;
+}
+
 /** Rows of roughly square shape, starting at `top`. */
 function grid(nodes: DiagramNode[], top: number): Map<string, Position> {
   const columns = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
@@ -65,7 +120,7 @@ export const dagreLayout: DiagramLayout = (nodes, edges) => {
   const linked = new Set(pairs.flat());
   const connected = nodes.filter((node) => linked.has(node.id));
   const alone = nodes.filter((node) => !linked.has(node.id));
-  const positions = layered(connected, pairs);
+  const positions = wrapTallRanks(connected, layered(connected, pairs));
   const below = grid(alone, connected.length === 0 ? 0 : bottom(connected, positions) + GAP * 2);
   const all = new Map([...positions, ...below]);
   const xs = [...all.values()].map((p) => p.x);
