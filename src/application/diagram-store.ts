@@ -9,10 +9,22 @@ import {
   type History,
   type HistoryStep,
 } from './history';
+import type { ImportReport } from './ports/project-analyzer';
+import type { PickedProject } from './ports/project-source';
 import { reselect, type Selection } from './selection';
 
 export type Command = (diagram: Diagram) => Diagram;
 export type SaveStatus = 'saved' | 'saving' | 'failed' | 'conflict';
+
+export type ImportStatus =
+  { phase: 'idle' } | { phase: 'reading'; files: number } | { phase: 'analyzing' };
+
+export interface ImportSummary {
+  projectName: string;
+  report: ImportReport;
+  dropped: number;
+  skipped: PickedProject['skipped'];
+}
 
 export interface DiagramState {
   diagram: Diagram;
@@ -22,6 +34,8 @@ export interface DiagramState {
   traceResult: TraceResult | null;
   saveStatus: SaveStatus;
   notice: string | null;
+  importStatus: ImportStatus;
+  importSummary: ImportSummary | null;
   apply: (command: Command) => void;
   undo: () => void;
   redo: () => void;
@@ -30,6 +44,8 @@ export interface DiagramState {
   load: (diagram: Diagram) => void;
   setSaveStatus: (status: SaveStatus) => void;
   setNotice: (notice: string | null) => void;
+  setImportStatus: (status: ImportStatus) => void;
+  setImportSummary: (summary: ImportSummary | null) => void;
 }
 
 export type DiagramStore = StoreApi<DiagramState>;
@@ -50,6 +66,8 @@ export function createDiagramStore(initial: Diagram, now: () => string): Diagram
       traceResult: null,
       saveStatus: 'saved',
       notice: null,
+      importStatus: { phase: 'idle' },
+      importSummary: null,
       apply: (command) => {
         const { diagram, history, selection } = get();
         const changed = command(diagram);
@@ -65,6 +83,8 @@ export function createDiagramStore(initial: Diagram, now: () => string): Diagram
         set({ diagram, history: emptyHistory, selection: null, traceResult: null }),
       setSaveStatus: (saveStatus) => set({ saveStatus }),
       setNotice: (notice) => set({ notice }),
+      setImportStatus: (importStatus) => set({ importStatus }),
+      setImportSummary: (importSummary) => set({ importSummary }),
     };
   });
 }

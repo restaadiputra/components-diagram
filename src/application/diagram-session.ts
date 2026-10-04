@@ -3,6 +3,7 @@ import type { Autosave } from './autosave';
 import { renameDiagram } from './commands/rename-diagram';
 import type { DiagramLibrary } from './diagram-library';
 import type { DiagramStore } from './diagram-store';
+import { createProjectImport, type ProjectImportDeps } from './project-import';
 import type { DiagramCodec } from './ports/diagram-codec';
 import type { LoadedDiagram } from './ports/diagram-repository';
 import type { FileGateway } from './ports/file-gateway';
@@ -13,6 +14,7 @@ export interface SessionDeps {
   autosave: Autosave;
   codec: DiagramCodec;
   files: FileGateway;
+  projects: Omit<ProjectImportDeps, 'store' | 'library'>;
 }
 
 /** Use cases that change which diagram is open, or move one in or out of the app. */
@@ -25,6 +27,8 @@ export interface DiagramSession {
   remove: (id: string) => Promise<void>;
   exportCurrent: () => void;
   importFile: () => Promise<void>;
+  importProject: () => Promise<void>;
+  cancelImport: () => void;
 }
 
 export function fileNameFor(name: string): string {
@@ -156,6 +160,7 @@ export function createSession(deps: SessionDeps): DiagramSession {
   const state = () => store.getState();
   const switcher = createSwitcher(deps);
   const { switchTo, notify } = switcher;
+  const projects = createProjectImport({ store, library, ...deps.projects }, switchTo);
   const remove = createRemover(deps, (id) => id === state().diagram.id, switcher);
 
   const renameOther = async (id: string, name: string) => {
@@ -218,5 +223,7 @@ export function createSession(deps: SessionDeps): DiagramSession {
         () => 'The file could not be imported.',
       );
     },
+    importProject: projects.importProject,
+    cancelImport: projects.cancelImport,
   };
 }

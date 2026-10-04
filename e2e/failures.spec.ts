@@ -44,7 +44,7 @@ test('a failed save is reported and blocks switching diagrams', async ({ page })
 test('a file from a newer app version is refused', async ({ page }) => {
   await page.goto('/');
   const chooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Import' }).click();
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
   await (
     await chooser
   ).setFiles({

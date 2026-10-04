@@ -1,10 +1,12 @@
+import { ImportStatusLine } from './import-status-line';
 import { SaveStatusLabel } from './save-status-label';
 import { useDiagramState, useServices } from './services-context';
 
 const BUTTON = 'rounded border px-2 py-0.5 disabled:opacity-40';
 
 export function TopBar({ onOpenList }: { onOpenList: () => void }) {
-  const { store, session } = useServices();
+  const { store, session, projectImportSupported } = useServices();
+  const importing = useDiagramState((state) => state.importStatus.phase !== 'idle');
   const name = useDiagramState((state) => state.diagram.name);
   const canUndo = useDiagramState((state) => state.history.past.length > 0);
   const canRedo = useDiagramState((state) => state.history.future.length > 0);
@@ -31,6 +33,16 @@ export function TopBar({ onOpenList }: { onOpenList: () => void }) {
       <button className={BUTTON} onClick={() => void session.importFile()}>
         Import
       </button>
+      <button
+        data-testid="import-project"
+        className={BUTTON}
+        disabled={!projectImportSupported || importing}
+        title={projectImportSupported ? undefined : 'Importing a project needs Chrome or Edge'}
+        onClick={() => void session.importProject()}
+      >
+        Import project…
+      </button>
+      <ImportStatusLine />
       <SaveStatusLabel />
     </header>
   );

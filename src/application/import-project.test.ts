@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ProjectAnalyzer } from './ports/project-analyzer';
 import { importProject } from './import-project';
+import type { DiagramNode } from '../domain/diagram';
 import { node } from '../domain/testing/fixtures';
 
 const emptyReport = {
@@ -10,6 +11,7 @@ const emptyReport = {
 
 const deps = (analyze: ProjectAnalyzer) => ({
   analyze,
+  layout: (nodes: DiagramNode[]) => nodes,
   newId: () => 'd1',
   now: () => '2026-01-01T00:00:00.000Z',
 });
@@ -39,5 +41,23 @@ describe('importProject', () => {
     expect(imported.diagram.name).toBe('Imported project');
     expect(imported.diagram.edges).toEqual([]);
     expect(imported.dropped).toBe(1);
+  });
+
+  it('lays the nodes out before building the diagram', async () => {
+    const analyze: ProjectAnalyzer = () =>
+      Promise.resolve({ nodes: [node('A', 'component')], edges: [], report: emptyReport });
+    const layout = (nodes: DiagramNode[]) => nodes.map((n) => ({ ...n, position: { x: 7, y: 9 } }));
+    const imported = await importProject({}, { ...deps(analyze), layout });
+    expect(imported.diagram.nodes[0]?.position).toEqual({ x: 7, y: 9 });
+  });
+
+  it('passes the analyze options through', async () => {
+    let seen: unknown;
+    const analyze: ProjectAnalyzer = (_files, _newId, options) => {
+      seen = options;
+      return Promise.resolve({ nodes: [], edges: [], report: emptyReport });
+    };
+    await importProject({}, { ...deps(analyze), options: { maxFiles: 5 } });
+    expect(seen).toEqual({ maxFiles: 5 });
   });
 });

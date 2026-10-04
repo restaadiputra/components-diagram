@@ -6,11 +6,19 @@ import { edge, node } from '../domain/testing/fixtures';
 import { startAutosave, type Autosave } from './autosave';
 import { renameDiagram } from './commands/rename-diagram';
 import { createDiagramLibrary } from './diagram-library';
-import { createSession, droppedNotice, fileNameFor } from './diagram-session';
+import { createSession, droppedNotice, fileNameFor, type SessionDeps } from './diagram-session';
 import { createDiagramStore } from './diagram-store';
 import type { DiagramRepository } from './ports/diagram-repository';
 
 const NOW = '2026-10-03T12:00:00.000Z';
+
+const unusedProjects: SessionDeps['projects'] = {
+  projectSource: { supported: false, pick: () => Promise.resolve(undefined) },
+  analyzer: () => Promise.reject(new Error('unused')),
+  layout: (nodes) => nodes,
+  newId: () => 'x',
+  now: () => NOW,
+};
 
 async function setup() {
   const repository = createInMemoryDiagramRepository();
@@ -61,6 +69,7 @@ async function setup() {
       },
       openText: () => (files.failure ? Promise.reject(files.failure) : Promise.resolve(files.next)),
     },
+    projects: unusedProjects,
   });
   return { repository, store, session, calls, files, state: () => store.getState() };
 }
@@ -218,6 +227,7 @@ async function setupLive() {
     autosave,
     codec: jsonDiagramCodec,
     files: { saveText: () => undefined, openText: () => Promise.resolve(files.next) },
+    projects: unusedProjects,
   });
   const edit = (name: string) => {
     store.getState().apply((diagram) => renameDiagram(diagram, name));

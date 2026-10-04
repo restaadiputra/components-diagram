@@ -12,6 +12,8 @@ export interface Services {
   newId: () => string;
   /** False when the browser has no usable storage and diagrams live in memory only. */
   persistent: boolean;
+  /** False when the browser cannot pick a folder (no File System Access API). */
+  projectImportSupported: boolean;
 }
 
 const ServicesContext = createContext<Services | null>(null);

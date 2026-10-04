@@ -61,7 +61,7 @@ test('an exported diagram can be imported as a new one', async ({ page }) => {
   const file = await (await download).path();
 
   const chooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Import' }).click();
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
   await (await chooser).setFiles(file);
 
   await expect(page.getByTestId('item-Page-cartItems')).toBeVisible();
@@ -72,7 +72,7 @@ test('an exported diagram can be imported as a new one', async ({ page }) => {
 test('an invalid file is rejected with a message', async ({ page }) => {
   await page.goto('/');
   const chooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Import' }).click();
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
   await (
     await chooser
   ).setFiles({

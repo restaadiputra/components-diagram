@@ -1,5 +1,9 @@
 import * as ts from 'typescript';
-import type { ImportResult, ProjectAnalyzer } from '../../application/ports/project-analyzer';
+import {
+  DEFAULT_MAX_FILES,
+  type ImportResult,
+  type ProjectAnalyzer,
+} from '../../application/ports/project-analyzer';
 import { createAnalysis, userSourceFiles, type Analysis } from './analysis';
 import { createProgram } from './create-program';
 import { discoverNodes } from './discover-nodes';
@@ -11,7 +15,7 @@ import { createBuilder } from './model-builder';
 import { createReport } from './report';
 import { traceDataFlow } from './trace-data-flow';
 
-export const DEFAULT_MAX_FILES = 2000;
+export { DEFAULT_MAX_FILES };
 
 const SOURCE_FILE = /\.(?:[cm]?[jt]sx?)$/;
 

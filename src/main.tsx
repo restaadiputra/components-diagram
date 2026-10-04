@@ -1,5 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import {
+  createBrowserProjectSource,
+  type PickerHost,
+} from './adapters/import/browser-project-source';
+import { createWorkerAnalyzer } from './adapters/import/worker-analyzer';
+import { dagreLayout } from './adapters/layout/dagre-layout';
 import { browserFileGateway } from './adapters/storage/browser-file-gateway';
 import { createInMemoryDiagramRepository } from './adapters/storage/in-memory-diagram-repository';
 import { createIndexedDbDiagramRepository } from './adapters/storage/indexed-db-diagram-repository';
@@ -49,12 +55,15 @@ async function bootstrap() {
   const autosave = startAutosave(store, repository, {
     baseline: initial.unsaved ? null : initial.diagram.updatedAt,
   });
+  // lib.dom types the picker's handles differently from the narrow shape the adapter reads.
+  const projectSource = createBrowserProjectSource(window as PickerHost);
   const session = createSession({
     store,
     library,
     autosave,
     codec: jsonDiagramCodec,
     files: browserFileGateway,
+    projects: { projectSource, analyzer: createWorkerAnalyzer(), layout: dagreLayout, newId, now },
   });
 
   // Do not lose the last 800 ms of work when the tab is hidden or closed.
@@ -65,7 +74,16 @@ async function bootstrap() {
 
   createRoot(root).render(
     <StrictMode>
-      <ServicesProvider value={{ store, session, library, newId, persistent }}>
+      <ServicesProvider
+        value={{
+          store,
+          session,
+          library,
+          newId,
+          persistent,
+          projectImportSupported: projectSource.supported,
+        }}
+      >
         <App />
       </ServicesProvider>
     </StrictMode>,

@@ -40,8 +40,11 @@ export interface ImportResult {
   report: ImportReport;
 }
 
+export const DEFAULT_MAX_FILES = 2000;
+
 export interface AnalyzeOptions {
   maxFiles?: number;
+  signal?: AbortSignal;
 }
 
 export type ProjectAnalyzer = (

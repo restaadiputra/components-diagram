@@ -41,6 +41,9 @@ export function DiagramCanvas() {
   const nodes = useMemo(() => toFlowNodes(diagram, view), [diagram, view]);
   const edges = useMemo(() => toFlowEdges(diagram, view), [diagram, view]);
   const { select, setViewport } = store.getState();
+  // A saved viewport wins; only a never-moved diagram is fitted to its content.
+  const { x, y, zoom } = diagram.viewport;
+  const unmoved = x === 0 && y === 0 && zoom === 1;
 
   return (
     <div
@@ -58,6 +61,8 @@ export function DiagramCanvas() {
         edges={edges}
         nodeTypes={nodeTypes}
         defaultViewport={diagram.viewport}
+        fitView={unmoved}
+        fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
         onMoveEnd={(_event, viewport) => setViewport(viewport)}
         onNodesChange={onNodesChange}
         onConnect={connection.onConnect}
