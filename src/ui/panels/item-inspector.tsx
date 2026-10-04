@@ -1,14 +1,18 @@
 import { removeItem } from '../../application/commands/remove-item';
 import { updateItem, type ItemPatch } from '../../application/commands/update-item';
+import { itemWarnings } from '../../application/diagram-warnings';
 import type { DiagramNode, Item } from '../../domain/diagram';
 import { useServices } from '../app-shell/services-context';
+import { useWarnings } from '../app-shell/use-warnings';
 import { CommitInput } from './commit-input';
 import { LinksEditor } from './links-editor';
 import { TraceSteps } from './trace-steps';
+import { WarningList } from './warning-list';
 
 export function ItemInspector({ node, item }: { node: DiagramNode; item: Item }) {
   const { store } = useServices();
   const apply = store.getState().apply;
+  const warnings = itemWarnings(useWarnings(), item.id);
   const target = { nodeId: node.id, itemId: item.id };
   const update = (patch: ItemPatch) =>
     apply((diagram) => updateItem(diagram, { ...target, patch }));
@@ -45,6 +49,7 @@ export function ItemInspector({ node, item }: { node: DiagramNode; item: Item })
       >
         Delete item
       </button>
+      <WarningList warnings={warnings} />
     </>
   );
 }
